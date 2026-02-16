@@ -1,9 +1,16 @@
-*
-!*.jpg
-!src
-!src/*
-!.gitignore
-!datasets
-!datasets/*
-!README.md
-!requirement.txt
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+.DS_Store
+
+# Virtual environments
+.venv
+
+#data/
+uv.lock
+cache/
