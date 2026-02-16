@@ -1,0 +1,8 @@
+*
+!src
+!src/*
+!.gitignore
+!datasets
+!datasets/*
+!README.md
+!requirement.txt
