@@ -6,11 +6,18 @@ dist/
 wheels/
 *.egg-info
 
-.DS_Store
 
 # Virtual environments
 .venv
 
-#data/
+data/
 uv.lock
 cache/
+
+
+# Files
+temp/
+
+
+# Dot Files
+.DS_Store
