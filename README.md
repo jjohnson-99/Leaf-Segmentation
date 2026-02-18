@@ -20,6 +20,9 @@ via the
 (link)(https://www.kaggle.com/competitions/infected-tomato-leaf-vein-segmentation/data).
 This repository is not associated with any competition submission.
 
+We do not have access to masks for the test images. Therefore, any evaluation
+of model performance on the test data is done visually.
+
 ## Segmentation Mask Encoding
 
 Every mask is the same size as the input images (875x1400 pixels) and is
@@ -113,5 +116,12 @@ the ground truth. The Jaccard loss is simply $L(A,B) = 1 - J(A,B)$. We use the
 ### Dice Loss
 
 It may be worth investigating the dice loss function $$DL(A,B) = 1 -
-\frac{2\vert A \cap B \vert}{\vert A \vert + \vert B \vert}$$ We do not use
+\frac{2\vert A \cap B \vert}{\vert A \vert + \vert B \vert}$$. We do not use
 BinaryCrossEntropy due to the target segmentation being small and nonlocalized.
+Indeed, any tests using BinaryCrossEntropy ended with predicted masks of almost
+entirely zeros.
+
+
+### Choice of Augmentations
+
+
