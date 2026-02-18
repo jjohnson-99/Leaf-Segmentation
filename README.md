@@ -79,3 +79,38 @@ def rl_decode(enc):
 - `annotation` -  a flattened and run-length encoded version of the binary vein
   mask for the corresponding image
 
+## Basic Model - Data Augmentation with Albumentations
+
+`notebooks/pytorch_model.ipynb` provides a model which utilizes the
+albumentations python library for data augmentation. When an image is chosen
+for training, it is first 'augmented' via a sequence of prescribed
+    transformations, each being applied with a prescribed probability. Any
+    transformation applied to the image is also applied to its mask.
+    Transformations may include random rotations, flipping the image, changing
+    the image contrast, shifting RGB values, etc. This artificially increases
+    the number of test examples by creating slightly modified copies of
+    existing data. We use the pretrained UNet11 model provided by the
+    TernausNet library and a Jaccard loss function, which is discussed below.
+
+### Jaccard Index
+
+The Jaccard index, defined as $J(A,B) = \frac{\vert A\cap B\vert}{\vert A\cup
+B\vert}$, is a measure of similarity of two sets $A$ and $B$. It is the ratio
+of common elements normalized by the total number of elements in either set. In
+the context of a binary segmentation problem, it is the number of entries
+correctly predicted by the model normalized by the total of number entries
+either in the ground truth or in the prediction. In a perfect prediction, we
+have $A \cap B = A \cup B$ and so the Jaccard index would be 1. If our
+prediction is a proper superset of the ground truth, the numerator is maximal,
+however, the union in the denominator is larger and so the index is less than
+1. We see that we are penalized by improperly assigning entries which are not
+in the ground truth. The Jaccard loss is simply $L(A,B) = 1 - J(A,B)$. We use
+the `BinaryJaccardIndex` function provided in by TorchMetrics library
+`torchmetrics.classification`. It may be necessary to force 
+`loss.requires_grad = True` before backpropagating.
+
+### Dice Loss
+
+It may be worth investigating the dice loss function $$DL(A,B) = 1 -
+\frac{2\vert A \cap B \vert}{\vert A \vert + \vert B \vert}$$ We do not use
+BinaryCrossEntropy due to the target segmentation being small and nonlocalized.
