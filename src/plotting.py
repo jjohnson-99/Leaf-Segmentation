@@ -4,19 +4,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
+from rl_decode import rl_decode
+
+
 # Constants for image dimensions
 HEIGHT = 1400
 WIDTH = 875
 
-# Function for run-length decoding
-def rl_decode(enc):
-    parts = [int(s) for s in enc.split(' ')]
-    dec = list()
-    for i in range(0, len(parts), 2):
-        cnt = parts[i]
-        val = parts[i + 1]
-        dec += cnt * [val]
-    return np.array(dec, dtype=np.uint8).reshape((HEIGHT, WIDTH))
 
 # Function to plot the image and its segmentation mask
 def plot_image_and_segmentation(image_name, dataset_folder):
@@ -43,7 +37,7 @@ def plot_image_and_segmentation(image_name, dataset_folder):
 
     # Extract the segmentation label and decode it using rl_decode
     encoded_label = seg_info['annotation'].values[0]
-    segmentation_mask = rl_decode(encoded_label)
+    segmentation_mask = rl_decode(encoded_label, HEIGHT, WIDTH)
 
     # Plot the image and its segmentation mask
     fig, ax = plt.subplots(1, 2, figsize=(12, 6))
