@@ -84,3 +84,5 @@ def display_test_image_grid(images_filenames, images_directory, predicted_masks=
     plt.show()
 
     
+def save_images():
+    return

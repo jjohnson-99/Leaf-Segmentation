@@ -1,3 +1,4 @@
+import argparse
 import os
 import random
 
@@ -13,7 +14,6 @@ from .model import (
     train_and_validate,
     predict
 )
-
 
 
 def main():
@@ -85,7 +85,7 @@ def main():
 
     params = {
         "model": "UNet11",
-        "device": "cpu",
+        "device": "mps",
         "lr": 0.001,
         "batch_size": 2,
         #"num_workers": 4,
@@ -105,4 +105,26 @@ def main():
     #display_test_image_grid(test_images_filenames, test_images_directory, predicted_masks=predicted_masks)
 
 if __name__ == "__main__":
+    # Create the parser
+    parser = argparse.ArgumentParser(description='Parameter settings for training')
+
+    # Add arguments
+    parser.add_argument('--device', type=str, default='mps', help='device to trian on: cuda, cpu, or mps')
+    parser.add_argument('--model', type=str, default='UNet11', help='model to run: UNet11 hardcoded and is the only model availalbe')
+
+    parser.add_argument('--loss_function', type=str, default='Jaccard', help='either Jaccard-Loss or Dice-Loss')
+    parser.add_argument('--optimizer', type=str, default="adam", help='optimizer to use')
+    parser.add_argument('--batch_size', type=int, default=2, help='batch size')
+    parser.add_argument('--lr', type=int, default=0.001, help='learning rate')
+    parser.add_argument('--epochs', type=int, default=10, help='number of epochs')
+
+    parser.add_argument('--train_val_seed', type=int, default=42, help='seed used to split training and validation data')
+    parser.add_argument('--augmentation_seed', type=int, default=137, help='seed used for augmenting samples')
+
+    parser.add_argument('--experiment_name', type=str, default='test', help='experiment_name')
+    parser.add_argument('--root_directory', type=str, default='../datasets', help='device to trian on: cuda, cpu, or mps')
+
+    # Parse the arguments
+    args = parser.parse_args()
+
     main()

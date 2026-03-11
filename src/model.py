@@ -124,6 +124,9 @@ def create_model(params):
 
 
 def train_and_validate(model, train_dataset, val_dataset, params):
+    """
+    Main training loop.
+    """
     train_loader = DataLoader(
         train_dataset,
         batch_size=params["batch_size"],
