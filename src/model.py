@@ -3,11 +3,10 @@ import os
 import random
 
 import cv2
-
 import albumentations as A
+import albumentations.augmentations.crops.functional as fcrops
 from albumentations.pytorch import ToTensorV2
 
-print("In module src __package__, __name__ ==", __package__, __name__)
 
 from dataset_classes import (
     LeafDataset,
@@ -19,18 +18,19 @@ from dataset_classes import (
 
 from helper_functions import (
     display_test_image_grid,
+    save_prediction_images,
 )
 
 
 def main():
     # Constants for image dimensions
-    # only PADDED values are used
-    # HEIGHT = 1400
-    # WIDTH = 875
+    #HEIGHT = 1400
+    #WIDTH = 875
 
     # Pad imagse as required by UNet11
     PADDED_HEIGHT = 1408
     PADDED_WIDTH = 896
+
 
     # setup data directories
     root_directory = os.path.join("../datasets")
@@ -38,6 +38,9 @@ def main():
 
     train_images_directory = os.path.join(root_directory, 'train')
     test_images_directory = os.path.join(root_directory, 'test')
+
+    # set prediction directory
+    prediction_images_directory = os.path.join(root_directory, 'predictions')
 
     # extract filenames
     images_filenames = sorted(os.listdir(train_images_directory))
@@ -95,7 +98,7 @@ def main():
         "lr": 0.001,
         "batch_size": 2,
         #"num_workers": 4,
-        "epochs": 10,
+        "epochs": 1,
     }
 
     model = create_model(params)
@@ -105,9 +108,15 @@ def main():
 
     predicted_masks = []
     for predicted_padded_mask, original_height, original_width in predictions:
-        #cropped_mask = F.center_crop(predicted_padded_mask, original_height, original_width)
-        predicted_masks.append(predicted_padded_mask)
+        crop_coordinates = fcrops.get_center_crop_coords((PADDED_HEIGHT, PADDED_WIDTH),
+                                                         (original_height, original_width))
+        cropped_mask = fcrops.crop(predicted_padded_mask, *crop_coordinates)
+        predicted_masks.append(cropped_mask)
 
+    if not os.path.exists(prediction_images_directory):
+        os.makedirs(prediction_images_directory)
+
+    #save_prediction_images(test_images_filenames, prediction_images_directory, predicted_masks)
     #display_test_image_grid(test_images_filenames, test_images_directory, predicted_masks=predicted_masks)
 
 if __name__ == "__main__":
