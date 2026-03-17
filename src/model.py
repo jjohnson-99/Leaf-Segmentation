@@ -98,7 +98,7 @@ def main():
         "lr": 0.001,
         "batch_size": 2,
         #"num_workers": 4,
-        "epochs": 1,
+        "epochs": 3,
     }
 
     model = create_model(params)
@@ -116,7 +116,7 @@ def main():
     if not os.path.exists(prediction_images_directory):
         os.makedirs(prediction_images_directory)
 
-    #save_prediction_images(test_images_filenames, prediction_images_directory, predicted_masks)
+    save_prediction_images(test_images_filenames, prediction_images_directory, predicted_masks)
     #display_test_image_grid(test_images_filenames, test_images_directory, predicted_masks=predicted_masks)
 
 if __name__ == "__main__":
