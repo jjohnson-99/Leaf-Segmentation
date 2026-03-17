@@ -33,8 +33,6 @@
     uv run python src/model.py
     ```
 
-**Currently, the model will run and output nothing. I still need to have the
-it save the predicted masks as images.**
 
 ## Overview
 
