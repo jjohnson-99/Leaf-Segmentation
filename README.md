@@ -2,6 +2,40 @@
 
 **This repository is an active work in progress. Expect consistent changes!**
 
+## Requirements for running locally
+
+* Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
+
+## Installation
+
+* Clone the repository:
+    ```bash
+    git clone https://github.com/jjohnson-99/Leaf-Segmentation.git
+    ```
+
+## Running the model
+
+* Create a virtual environment and install dependencies with:
+    ```bash
+    uv sync
+    ```
+* Activate the virtual environment with:
+   - MacOS/Linux:
+     ```bash
+     source .venv/bin/activate
+     ```
+   - Windows:
+     ```bash
+     .venv\Scripts\activate
+     ```
+* Run the model with:
+    ```bash
+    uv run python src/model.py
+    ```
+
+**Currently, the model will run and output nothing. I still need to have the
+it save the predicted masks as images.**
+
 Given a limited dataset of only 27 images of tomato leafs, many of which
 display signs of disease at various stages, the goal is to develop a model to
 segment the primary and secondary veins. Along with each image, we are given a

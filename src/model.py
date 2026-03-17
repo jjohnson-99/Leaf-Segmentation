@@ -1,177 +1,136 @@
-import pandas as pd
-import cv2
-import numpy as np
+import argparse
 import os
+import random
 
-import ternausnet.models
-import torch
-import torch.optim
-from torch import nn
-from torch.backends import cudnn
-from torch.utils.data import DataLoader, Dataset
-from torchmetrics.classification import BinaryJaccardIndex
-from tqdm import tqdm
+import cv2
 
-from .helper_functions import MetricMonitor
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
-from .rl_decode import (
-    rl_decode,
-    rl_encode,
+print("In module src __package__, __name__ ==", __package__, __name__)
+
+from dataset_classes import (
+    LeafDataset,
+    LeafInferenceDataset,
+    create_model,
+    train_and_validate,
+    predict,
 )
 
-#cudnn.benchmark = True
+from helper_functions import (
+    display_test_image_grid,
+)
 
 
-class LeafDataset(Dataset):
-    """
-    Dataset class for training and validation data.
-    """
-    def __init__(self, images_filenames, images_directory, masks_directory, transform=None):
-        self.images_filenames = images_filenames
-        self.images_directory = images_directory
-        self.masks_directory = masks_directory
+def main():
+    # Constants for image dimensions
+    # only PADDED values are used
+    # HEIGHT = 1400
+    # WIDTH = 875
 
-        self.annotations = pd.read_csv(masks_directory + "/train.csv")
-        self.transform = transform
+    # Pad imagse as required by UNet11
+    PADDED_HEIGHT = 1408
+    PADDED_WIDTH = 896
 
-    def __len__(self):
-        return len(self.images_filenames)
+    # setup data directories
+    root_directory = os.path.join("../datasets")
+    masks_directory = root_directory
 
-    def __getitem__(self, idx):
-        image_filename = self.images_filenames[idx]
-        image = cv2.imread(os.path.join(self.images_directory, image_filename))
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    train_images_directory = os.path.join(root_directory, 'train')
+    test_images_directory = os.path.join(root_directory, 'test')
 
-        # Assuming the CSV contains two columns: 'id == image_filename' and 'encoded_mask == annotation'
-        if image_filename[-4:] == ".jpg":
-            image_filename = image_filename[:-4]
-        encoded_mask_df = self.annotations[self.annotations['id'] == image_filename]
-        if encoded_mask_df.empty:
-            raise ValueError(f"No segmentation data found for {image_filename} in the CSV.")
+    # extract filenames
+    images_filenames = sorted(os.listdir(train_images_directory))
+    correct_images_filenames = [i for i in images_filenames if cv2.imread(os.path.join(train_images_directory, i)) is not None]
 
-        encoded_mask = encoded_mask_df['annotation'].values[0]
-        mask = rl_decode(encoded_mask)
+    test_images_filenames = sorted(os.listdir(test_images_directory))
+    correct_test_filenames = [i for i in test_images_filenames if cv2.imread(os.path.join(test_images_directory, i)) is not None]
 
-        mask = mask.astype(np.float32)
-        if self.transform is not None:
-            transformed = self.transform(image=image, mask=mask)
-            image = transformed["image"]
-            mask = transformed["mask"]
-        return image, mask
-    
+    random.seed(42)
+    random.shuffle(correct_images_filenames)
 
-class LeafInferenceDataset(Dataset):
-    """
-    Dataset class for test data.
-    """
-    def __init__(self, images_filenames, images_directory, transform=None):
-        self.images_filenames = images_filenames
-        self.images_directory = images_directory
-        self.transform = transform
+    # split data filenames
+    train_images_filenames = correct_images_filenames[0:13]
+    val_images_filenames = correct_images_filenames[13:]
+    test_images_filenames = correct_test_filenames
 
-    def __len__(self):
-        return len(self.images_filenames)
-
-    def __getitem__(self, idx):
-        image_filename = self.images_filenames[idx]
-        image = cv2.imread(os.path.join(self.images_directory, image_filename))
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        original_size = tuple(image.shape[:2])
-        if self.transform is not None:
-            transformed = self.transform(image=image)
-            image = transformed["image"]
-        return image, original_size
-
-
-def train(train_loader, model, criterion, optimizer, epoch, params):
-    metric_monitor = MetricMonitor()
-    model.train()
-    stream = tqdm(train_loader)
-    for _, (images, target) in enumerate(stream, start=1):
-        images = images.to(params["device"], non_blocking=True)
-        target = target.to(params["device"], non_blocking=True)
-        output = model(images).squeeze(1)
-        loss = criterion(output, target)
-        metric_monitor.update("Loss", loss.item())
-        optimizer.zero_grad()
-        loss.requires_grad = True
-        loss.backward()
-        optimizer.step()
-        stream.set_description(
-            f"Epoch: {epoch}. Train.      {metric_monitor}",
-        )
-
-
-def validate(val_loader, model, criterion, epoch, params):
-    metric_monitor = MetricMonitor()
-    model.eval()
-    stream = tqdm(val_loader)
-    with torch.no_grad():
-        for _, (images, target) in enumerate(stream, start=1):
-            images = images.to(params["device"], non_blocking=True)
-            target = target.to(params["device"], non_blocking=True)
-            output = model(images).squeeze(1)
-            loss = criterion(output, target)
-            metric_monitor.update("Loss", loss.item())
-            stream.set_description(
-                f"Epoch: {epoch}. Validation. {metric_monitor}",
-            )
-
-
-def create_model(params):
-    model = getattr(ternausnet.models, params["model"])(pretrained=True)
-    return model.to(params["device"])
-
-
-def train_and_validate(model, train_dataset, val_dataset, params):
-    """
-    Main training loop.
-    """
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=params["batch_size"],
-        shuffle=True,
-        #num_workers=params["num_workers"],
-        pin_memory=True,
+    train_transform = A.Compose(
+        [
+            A.PadIfNeeded(min_height=PADDED_HEIGHT, min_width=PADDED_WIDTH, border_mode=cv2.BORDER_CONSTANT),
+            A.ShiftScaleRotate(shift_limit=0.2, scale_limit=0.2, rotate_limit=50, p=0.5),
+            A.RGBShift(r_shift_limit=50, g_shift_limit=50, b_shift_limit=50, p=0.5),
+            A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=0.5),
+            A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            ToTensorV2(),
+        ],
+        strict=True,
+        seed=137,
     )
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=params["batch_size"],
-        shuffle=False,
-        #num_workers=params["num_workers"],
-        pin_memory=True,
+    train_dataset = LeafDataset(train_images_filenames, train_images_directory, masks_directory, transform=train_transform)
+
+    val_transform = A.Compose(
+        [
+            A.PadIfNeeded(min_height=PADDED_HEIGHT, min_width=PADDED_WIDTH, border_mode=cv2.BORDER_CONSTANT),
+            A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            ToTensorV2()
+        ],
+        strict=True,
+        seed=137,
     )
-    #criterion = nn.BCEWithLogitsLoss().to(params["device"])
-    criterion = (1 - BinaryJaccardIndex()).to(params["device"])
-    optimizer = torch.optim.Adam(model.parameters(), lr=params["lr"])
-    
-    for epoch in range(1, params["epochs"] + 1):
-        train(train_loader, model, criterion, optimizer, epoch, params)
-        validate(val_loader, model, criterion, epoch, params)
-    return model
+    val_dataset = LeafDataset(val_images_filenames, train_images_directory, masks_directory, transform=val_transform)
+
+    test_transform = A.Compose(
+        [
+            A.PadIfNeeded(min_height=PADDED_HEIGHT, min_width=PADDED_WIDTH, border_mode=cv2.BORDER_CONSTANT),
+            A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            ToTensorV2()
+        ],
+    )
+    test_dataset = LeafInferenceDataset(test_images_filenames, test_images_directory, transform=test_transform)
 
 
-def predict(model, params, test_dataset, batch_size):
-    test_loader = DataLoader(
-        test_dataset,
-        batch_size=batch_size,
-        shuffle=False,
-        #num_workers=params["num_workers"],
-        pin_memory=True,
-    )
-    model.eval()
-    predictions = []
-    with torch.no_grad():
-        for images, (original_heights, original_widths) in test_loader:
-            images = images.to(params["device"], non_blocking=True)
-            output = model(images)
-            probabilities = torch.sigmoid(output.squeeze(1))
-            predicted_masks = (probabilities >= 0.5).float() * 1
-            predicted_masks = predicted_masks.cpu().numpy()
-            for predicted_mask, original_height, original_width in zip(
-                predicted_masks,
-                original_heights.numpy(),
-                original_widths.numpy(),
-            ):
-                predictions.append((predicted_mask, original_height, original_width))
-    return predictions
+    params = {
+        "model": "UNet11",
+        "device": "mps",
+        "lr": 0.001,
+        "batch_size": 2,
+        #"num_workers": 4,
+        "epochs": 10,
+    }
+
+    model = create_model(params)
+    model = train_and_validate(model, train_dataset, val_dataset, params)
+
+    predictions = predict(model, params, test_dataset, batch_size=2)
+
+    predicted_masks = []
+    for predicted_padded_mask, original_height, original_width in predictions:
+        #cropped_mask = F.center_crop(predicted_padded_mask, original_height, original_width)
+        predicted_masks.append(predicted_padded_mask)
+
+    #display_test_image_grid(test_images_filenames, test_images_directory, predicted_masks=predicted_masks)
+
+if __name__ == "__main__":
+    # Create the parser
+    parser = argparse.ArgumentParser(description='Parameter settings for training')
+
+    # Add arguments
+    parser.add_argument('--device', type=str, default='mps', help='device to trian on: cuda, cpu, or mps')
+    parser.add_argument('--model', type=str, default='UNet11', help='model to run: UNet11 hardcoded and is the only model availalbe')
+
+    parser.add_argument('--loss_function', type=str, default='Jaccard', help='either Jaccard-Loss or Dice-Loss')
+    parser.add_argument('--optimizer', type=str, default="adam", help='optimizer to use')
+    parser.add_argument('--batch_size', type=int, default=2, help='batch size')
+    parser.add_argument('--lr', type=int, default=0.001, help='learning rate')
+    parser.add_argument('--epochs', type=int, default=10, help='number of epochs')
+
+    parser.add_argument('--train_val_seed', type=int, default=42, help='seed used to split training and validation data')
+    parser.add_argument('--augmentation_seed', type=int, default=137, help='seed used for augmenting samples')
+
+    parser.add_argument('--experiment_name', type=str, default='test', help='experiment_name')
+    parser.add_argument('--root_directory', type=str, default='../datasets', help='device to trian on: cuda, cpu, or mps')
+
+    # Parse the arguments
+    args = parser.parse_args()
+
+    main()
