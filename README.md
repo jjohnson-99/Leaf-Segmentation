@@ -36,6 +36,8 @@
 **Currently, the model will run and output nothing. I still need to have the
 it save the predicted masks as images.**
 
+## Overview
+
 Given a limited dataset of only 27 images of tomato leafs, many of which
 display signs of disease at various stages, the goal is to develop a model to
 segment the primary and secondary veins. Along with each image, we are given a
@@ -158,4 +160,7 @@ entirely zeros.
 
 ### Choice of Augmentations
 
+**The current choice of augmentations does not attempt to address the dark spots caused
+by disease, it only shifts the images and changes the contrast. While the current model
+captures the outline of the leafs, it does a poor job of focusing on the veins alone.**
 
