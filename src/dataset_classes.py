@@ -10,6 +10,7 @@ from torch import nn
 from torch.backends import cudnn
 from torch.utils.data import DataLoader, Dataset
 from torchmetrics.classification import BinaryJaccardIndex
+from torchmetrics.segmentation import DiceScore
 from tqdm import tqdm
 
 from helper_functions import MetricMonitor
@@ -143,7 +144,11 @@ def train_and_validate(model, train_dataset, val_dataset, params):
         pin_memory=True,
     )
     #criterion = nn.BCEWithLogitsLoss().to(params["device"])
-    criterion = (1 - BinaryJaccardIndex()).to(params["device"])
+    if params["loss"] == 'Dice':
+        criterion = (1 - DiceScore(num_classes=2)).to(params["device"])
+    else:
+        criterion = (1 - BinaryJaccardIndex()).to(params["device"])
+
     optimizer = torch.optim.Adam(model.parameters(), lr=params["lr"])
     
     for epoch in range(1, params["epochs"] + 1):

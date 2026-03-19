@@ -59,6 +59,9 @@ Here are the primary command-line arguments you can use:
 - `--experiment_name`: Name of the experiment. Default is `test`.
 - `--root_data_directory`: Directory where training and testing data exist. Must be the same root directory. Default is `../datasets`.
 
+**Some of these currently do not do anything, though that should change within a few days of you reading this.**
+**In current testing, Jaccard performs better than Dice, and the output is generally sensitive. Better choice of preprocessing and augmentation is eneeded**
+
 ### Results
 
 Because we do not have access to target masks, we access the model visually by looking at the predicted masks.

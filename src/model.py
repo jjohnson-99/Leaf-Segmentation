@@ -16,13 +16,14 @@ from dataset_classes import (
     predict,
 )
 
+
 from helper_functions import (
     display_test_image_grid,
     save_prediction_images,
 )
 
 
-def main():
+def main(args):
     # Constants for image dimensions
     #HEIGHT = 1400
     #WIDTH = 875
@@ -31,9 +32,10 @@ def main():
     PADDED_HEIGHT = 1408
     PADDED_WIDTH = 896
 
-
     # setup data directories
-    root_directory = os.path.join("../datasets")
+    print(os.getcwd())
+    root_directory = os.path.join('datasets')
+    print(root_directory)
     masks_directory = root_directory
 
     train_images_directory = os.path.join(root_directory, 'train')
@@ -92,13 +94,22 @@ def main():
     test_dataset = LeafInferenceDataset(test_images_filenames, test_images_directory, transform=test_transform)
 
 
+    #params = {
+    #    "model": "UNet11",
+    #    "device": "mps",
+    #    "lr": 0.001,
+    #    "batch_size": 2,
+    #    #"num_workers": 4,
+    #    "epochs": 3,
+    #}
+
     params = {
-        "model": "UNet11",
-        "device": "mps",
-        "lr": 0.001,
-        "batch_size": 2,
-        #"num_workers": 4,
-        "epochs": 3,
+        "model": args.model,
+        "device": args.device,
+        "lr": args.lr,
+        "batch_size": args.batch_size,
+        "epochs": args.epochs,
+        "loss": args.loss_function,
     }
 
     model = create_model(params)
@@ -117,18 +128,18 @@ def main():
         os.makedirs(prediction_images_directory)
 
     save_prediction_images(test_images_filenames, prediction_images_directory, predicted_masks)
-    #display_test_image_grid(test_images_filenames, test_images_directory, predicted_masks=predicted_masks)
+
 
 if __name__ == "__main__":
     # Create the parser
     parser = argparse.ArgumentParser(description='Parameter settings for training')
 
     # Add arguments
-    parser.add_argument('--device', type=str, default='mps', help='device to trian on: cuda, cpu, or mps')
-    parser.add_argument('--model', type=str, default='UNet11', help='model to run: UNet11 hardcoded and is the only model availalbe')
+    parser.add_argument('--model', type=str, default='UNet11', choices=['UNet11'], help='model to run: UNet11 hardcoded and is the only model availalbe')
+    parser.add_argument('--device', type=str, default='mps', choices=['cuda', 'cpu', 'mps'], help='device to trian on: cuda, cpu, or mps')
 
-    parser.add_argument('--loss_function', type=str, default='Jaccard', help='either Jaccard-Loss or Dice-Loss')
-    parser.add_argument('--optimizer', type=str, default="adam", help='optimizer to use')
+    parser.add_argument('--loss_function', type=str, default='Jaccard', choices=['Jaccard', 'Dice'], help='either Jaccard-Loss or Dice-Loss')
+    parser.add_argument('--optimizer', type=str, default="adam", choices=['adam'], help='optimizer to use')
     parser.add_argument('--batch_size', type=int, default=2, help='batch size')
     parser.add_argument('--lr', type=int, default=0.001, help='learning rate')
     parser.add_argument('--epochs', type=int, default=10, help='number of epochs')
@@ -142,4 +153,4 @@ if __name__ == "__main__":
     # Parse the arguments
     args = parser.parse_args()
 
-    main()
+    main(args)
