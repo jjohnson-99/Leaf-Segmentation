@@ -137,7 +137,7 @@ if __name__ == "__main__":
     parser.add_argument('--augmentation_seed', type=int, default=137, help='seed used for augmenting samples')
 
     parser.add_argument('--experiment_name', type=str, default='test', help='experiment_name')
-    parser.add_argument('--root_directory', type=str, default='../datasets', help='device to trian on: cuda, cpu, or mps')
+    parser.add_argument('--root_data_directory', type=str, default='../datasets', help='the root directory the training and test data exists in')
 
     # Parse the arguments
     args = parser.parse_args()

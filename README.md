@@ -28,11 +28,41 @@
      ```bash
      .venv\Scripts\activate
      ```
-* Run the model with:
+* Run the model with, assuming you remain in the root directory:
     ```bash
     uv run python src/model.py
     ```
 
+
+## Usage
+
+The main script for running experiments is `src/model.py`. You can run it with various options depending on the method you want to use.
+
+### Basic Command
+
+```bash
+python src/model.py --device mps --loss_function Jaccard --train_val_seed 42 --augmentation_seed 137 --experiment_name my_experiment
+```
+
+### Parameters
+
+Here are the primary command-line arguments you can use:
+
+- `--device`: What device you want to train on (`cuda`, `cpu`, `mps`). Default is `cpu`.
+- `--loss_function`: What loss function you want to train the model with (`Jaccard`, `Dice`). Default is `Jaccard`.
+- `--optimizer`: What optimizer you want to train with (`adam`). Default is `adam`.
+- `--batch_size`: What batch size of the model. Default is `2`.
+- `--lr`: Learning rate of the model. Default is `0.001`.
+- `--epochs`: Number of epochs to run. Default is `10`.
+- `--train_val_seed`: Seed used to split training and validation data. Default is `42`.
+- `--augmentation_seed`: Seed used for augmenting samples. Default is `137`.
+- `--experiment_name`: Name of the experiment. Default is `test`.
+- `--root_data_directory`: Directory where training and testing data exist. Must be the same root directory. Default is `../datasets`.
+
+### Results
+
+Because we do not have access to target masks, we access the model visually by looking at the predicted masks.
+Predictions are stored in `./datasets/predictions`.
 
 ## Overview
 
