@@ -6,15 +6,25 @@ import os
 import ternausnet.models
 import torch
 import torch.optim
+import torchvision.models
+
 from torch import nn
 from torch.backends import cudnn
 from torch.utils.data import DataLoader, Dataset
 from torchmetrics.classification import BinaryJaccardIndex
-from torchmetrics.segmentation import DiceScore
+from torchmetrics.segmentation import (
+    DiceScore,
+    MeanIoU,
+)
 from tqdm import tqdm
 
+from loss_functions import (
+    SoftJaccardLoss,
+    SoftJaccardBCELoss,
+    SoftDiceLoss,
+    SoftDiceBCELoss,
+)
 from helper_functions import MetricMonitor
-
 from rl_decode import (
     rl_decode,
     rl_encode,
@@ -93,10 +103,10 @@ def train(train_loader, model, criterion, optimizer, epoch, params):
         images = images.to(params["device"], non_blocking=True)
         target = target.to(params["device"], non_blocking=True)
         output = model(images).squeeze(1)
+
         loss = criterion(output, target)
         metric_monitor.update("Loss", loss.item())
         optimizer.zero_grad()
-        loss.requires_grad = True
         loss.backward()
         optimizer.step()
         stream.set_description(
@@ -121,6 +131,9 @@ def validate(val_loader, model, criterion, epoch, params):
 
 
 def create_model(params):
+    #You can also use `weights=VGG11_Weights.DEFAULT` to get the most up-to-date weights. Try UNet16, Resnet50?
+    #weights = torchvision.models.VGG11_Weights.DEFAULT #IMAGENET1K_V1
+    #model = getattr(ternausnet.models, params["model"])(weights=weights)
     model = getattr(ternausnet.models, params["model"])(pretrained=True)
     return model.to(params["device"])
 
@@ -129,26 +142,38 @@ def train_and_validate(model, train_dataset, val_dataset, params):
     """
     Main training loop.
     """
+    pin_memory=True
+    if params['device'] == 'mps':
+        pin_memory=False
+
     train_loader = DataLoader(
         train_dataset,
         batch_size=params["batch_size"],
         shuffle=True,
         #num_workers=params["num_workers"],
-        pin_memory=True,
+        pin_memory=pin_memory,
     )
     val_loader = DataLoader(
         val_dataset,
         batch_size=params["batch_size"],
         shuffle=False,
         #num_workers=params["num_workers"],
-        pin_memory=True,
+        pin_memory=pin_memory,
     )
-    #criterion = nn.BCEWithLogitsLoss().to(params["device"])
-    if params["loss"] == 'Dice':
-        criterion = (1 - DiceScore(num_classes=2)).to(params["device"])
-    else:
-        criterion = (1 - BinaryJaccardIndex()).to(params["device"])# + nn.BCEWithLogitsLoss().to(params["device"])
-        #criterion = nn.BCEWithLogitsLoss().to(params["device"])
+    
+    match params['loss']:
+        case 'SoftJaccard':
+            criterion = SoftJaccardLoss(weight=1e-7).to(params["device"])
+        case 'SoftJaccardBCE':
+            criterion = SoftJaccardBCELoss(weight=1e-7).to(params["device"])
+        case 'SoftDice':
+            criterion = SoftDiceLoss(weight=1e-7).to(params["device"])
+        case 'SoftDiceBCE':
+            criterion = SoftDiceBCELoss(weight=1e-7).to(params["device"])
+        case 'BCE':
+            criterion = nn.BCEWithLogitsLoss().to(params["device"])
+        case _:
+            criterion = nn.BCEWithLogitsLoss().to(params["device"])
 
     optimizer = torch.optim.Adam(model.parameters(), lr=params["lr"])
     
@@ -159,12 +184,15 @@ def train_and_validate(model, train_dataset, val_dataset, params):
 
 
 def predict(model, params, test_dataset, batch_size):
+    pin_memory=True
+    if params['device'] == 'mps':
+        pin_memory=False
     test_loader = DataLoader(
         test_dataset,
         batch_size=batch_size,
         shuffle=False,
         #num_workers=params["num_workers"],
-        pin_memory=True,
+        pin_memory=pin_memory,
     )
     model.eval()
     predictions = []

@@ -37,8 +37,6 @@ def main(args):
     train_images_directory = os.path.join(root_directory, 'train')
     test_images_directory = os.path.join(root_directory, 'test')
 
-    # set prediction directory
-    prediction_images_directory = os.path.join(root_directory, 'predictions')
 
     # extract filenames
     images_filenames = sorted(os.listdir(train_images_directory))
@@ -62,7 +60,8 @@ def main(args):
             A.ElasticTransform(alpha=1, sigma=50, p=0.5),
             A.HorizontalFlip(p=0.5),
             #A.VerticalFlip(p=0.5),
-            A.ShiftScaleRotate(shift_limit=0.2, scale_limit=0.2, rotate_limit=50, p=0.5),
+            #A.ShiftScaleRotate(shift_limit=0.2, scale_limit=0.2, rotate_limit=50, p=0.5),
+            A.Affine(translate_percent=0.2, scale=0.2, rotate=50, p=0.5),
             A.RGBShift(r_shift_limit=50, g_shift_limit=50, b_shift_limit=50, p=0.5),
             #A.OneOf(
             #    [
@@ -137,10 +136,18 @@ def main(args):
         cropped_mask = fcrops.crop(predicted_padded_mask, *crop_coordinates)
         predicted_masks.append(cropped_mask)
 
-    if not os.path.exists(prediction_images_directory):
-        os.makedirs(prediction_images_directory)
+    # set prediction directory
+    root_prediction_images_directory = os.path.join(root_directory, 'predictions')
+    experiment_prediction_images_directory = os.path.join(root_prediction_images_directory,
+                                                          args.experiment_name)
 
-    save_prediction_images(test_images_filenames, prediction_images_directory, predicted_masks)
+    if not os.path.exists(root_prediction_images_directory):
+        os.makedirs(root_prediction_images_directory)
+
+    if not os.path.exists(experiment_prediction_images_directory):
+        os.makedirs(experiment_prediction_images_directory)
+
+    save_prediction_images(test_images_filenames, experiment_prediction_images_directory, predicted_masks)
 
 
 if __name__ == "__main__":
@@ -151,7 +158,17 @@ if __name__ == "__main__":
     parser.add_argument('--model', type=str, default='UNet11', choices=['UNet11'], help='model to run: UNet11 hardcoded and is the only model available')
     parser.add_argument('--device', type=str, default='mps', choices=['cuda', 'cpu', 'mps'], help='device to trian on: cuda, cpu, or mps')
 
-    parser.add_argument('--loss_function', type=str, default='Jaccard', choices=['Jaccard', 'Dice'], help='either Jaccard-Loss or Dice-Loss')
+    parser.add_argument('--loss_function', type=str, 
+                        default='SoftJaccard', 
+                        choices=[
+                            'SoftJaccard', 
+                            'SoftJaccardBCE',
+                            'SoftDice',
+                            'SoftDiceBCE',
+                            'BCE',
+                            ], 
+                        help='either Soft Jaccard Loss or Soft Dice Loss',
+    )
     parser.add_argument('--optimizer', type=str, default="adam", choices=['adam'], help='optimizer to use')
     parser.add_argument('--batch_size', type=int, default=2, help='batch size')
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
@@ -160,8 +177,8 @@ if __name__ == "__main__":
     parser.add_argument('--train_val_seed', type=int, default=42, help='seed used to split training and validation data')
     parser.add_argument('--augmentation_seed', type=int, default=137, help='seed used for augmenting samples')
 
-    parser.add_argument('--experiment_name', type=str, default='test', help='experiment_name')
-    parser.add_argument('--root_data_directory', type=str, default='../datasets', help='the root directory the training and test data exists in')
+    parser.add_argument('--experiment_name', type=str, default='experiment_predictions', help='experiment_name')
+    parser.add_argument('--root_data_directory', type=str, default='datasets', help='the root directory the training and test data exists in')
 
     # Parse the arguments
     args = parser.parse_args()

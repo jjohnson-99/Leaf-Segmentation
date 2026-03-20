@@ -85,6 +85,10 @@ def display_test_image_grid(images_filenames, images_directory, predicted_masks=
 
     
 def save_prediction_images(images_filenames, prediction_images_directory, predicted_masks):
+    # Make a new folder if 'Data' folder does not exist
+    if not os.path.exists(prediction_images_directory):
+        os.makedirs(prediction_images_directory)
+
     for i, image_filename in enumerate(images_filenames):
         plt.imsave(os.path.join(prediction_images_directory, 'predicted_mask_'+image_filename),
                    predicted_masks[i])
