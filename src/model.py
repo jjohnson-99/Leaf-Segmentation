@@ -7,7 +7,6 @@ import albumentations as A
 import albumentations.augmentations.crops.functional as fcrops
 from albumentations.pytorch import ToTensorV2
 
-
 from dataset_classes import (
     LeafDataset,
     LeafInferenceDataset,
@@ -15,7 +14,6 @@ from dataset_classes import (
     train_and_validate,
     predict,
 )
-
 
 from helper_functions import (
     display_test_image_grid,
@@ -33,9 +31,7 @@ def main(args):
     PADDED_WIDTH = 896
 
     # setup data directories
-    print(os.getcwd())
     root_directory = os.path.join('datasets')
-    print(root_directory)
     masks_directory = root_directory
 
     train_images_directory = os.path.join(root_directory, 'train')
@@ -62,9 +58,26 @@ def main(args):
     train_transform = A.Compose(
         [
             A.PadIfNeeded(min_height=PADDED_HEIGHT, min_width=PADDED_WIDTH, border_mode=cv2.BORDER_CONSTANT),
+            A.RandomCrop(256, 256),
+            A.ElasticTransform(alpha=1, sigma=50, p=0.5),
+            A.HorizontalFlip(p=0.5),
+            #A.VerticalFlip(p=0.5),
             A.ShiftScaleRotate(shift_limit=0.2, scale_limit=0.2, rotate_limit=50, p=0.5),
             A.RGBShift(r_shift_limit=50, g_shift_limit=50, b_shift_limit=50, p=0.5),
-            A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=0.5),
+            #A.OneOf(
+            #    [
+            #        A.MedianBlur(blur_limit=2, p=0.1),
+            #        A.Blur(blur_limit=2, p=0.1),
+            #    ],
+            #    p=0.5,
+            #),
+            A.OneOf(
+                [
+                    A.CLAHE(clip_limit=2),
+                    A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=0.5),
+                ],
+                p=0.5,
+            ),
             A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
             ToTensorV2(),
         ],
@@ -135,13 +148,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Parameter settings for training')
 
     # Add arguments
-    parser.add_argument('--model', type=str, default='UNet11', choices=['UNet11'], help='model to run: UNet11 hardcoded and is the only model availalbe')
+    parser.add_argument('--model', type=str, default='UNet11', choices=['UNet11'], help='model to run: UNet11 hardcoded and is the only model available')
     parser.add_argument('--device', type=str, default='mps', choices=['cuda', 'cpu', 'mps'], help='device to trian on: cuda, cpu, or mps')
 
     parser.add_argument('--loss_function', type=str, default='Jaccard', choices=['Jaccard', 'Dice'], help='either Jaccard-Loss or Dice-Loss')
     parser.add_argument('--optimizer', type=str, default="adam", choices=['adam'], help='optimizer to use')
     parser.add_argument('--batch_size', type=int, default=2, help='batch size')
-    parser.add_argument('--lr', type=int, default=0.001, help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
     parser.add_argument('--epochs', type=int, default=10, help='number of epochs')
 
     parser.add_argument('--train_val_seed', type=int, default=42, help='seed used to split training and validation data')

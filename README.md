@@ -60,7 +60,7 @@ Here are the primary command-line arguments you can use:
 - `--root_data_directory`: Directory where training and testing data exist. Must be the same root directory. Default is `../datasets`.
 
 **Some of these currently do not do anything, though that should change within a few days of you reading this.**
-**In current testing, Jaccard performs better than Dice, and the output is generally sensitive. Better choice of preprocessing and augmentation is eneeded**
+**In current testing, Jaccard performs better than Dice, and the output is generally sensitive. Better choice of preprocessing and augmentation is needed**
 
 ### Results
 
@@ -182,12 +182,21 @@ the ground truth. The Jaccard loss is simply $L(A,B) = 1 - J(A,B)$. We use the
 
 ### Dice Loss
 
-It may be worth investigating the dice loss function $$DL(A,B) = 1 -
-\frac{2\vert A \cap B \vert}{\vert A \vert + \vert B \vert}$$. We do not use
+The dice loss function $$DL(A,B) = 1 - \frac{2\vert A \cap B \vert}{\vert A \vert + \vert B \vert}$$. We do not use
 BinaryCrossEntropy due to the target segmentation being small and nonlocalized.
 Indeed, any tests using BinaryCrossEntropy ended with predicted masks of almost
-entirely zeros.
+entirely zeros. The Jaccard loss function has preformed better than dice loss in my testing so far.
 
+### Jaccard Index and BinaryCrossEntropy combined
+
+The model tends to either overpredict or underpredict when using the Jaccard loss function alone. In particular
+the model overemphasizes the "noise" in the black felt background and seems to confuse this with the texture
+of the leaves. Given that the veins are contained within the leaf, there is an artifical boundary the model
+should not look outside from. Adding a boundary-aware loss term such as BinaryCrossEntropy could reduce
+the number of false positives due to the noise produced by the Jaccard loss term.
+
+**I'll be adding this regularlized loss function now, though there seems to be some subtlety with pytorch since simply using
+`criterion = 1 - BinaryJaccardIndex() + nn.BCEWithLogitsLoss()` does not seem to be aloud.**
 
 ### Choice of Augmentations
 

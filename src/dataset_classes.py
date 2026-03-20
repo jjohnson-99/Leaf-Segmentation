@@ -147,7 +147,8 @@ def train_and_validate(model, train_dataset, val_dataset, params):
     if params["loss"] == 'Dice':
         criterion = (1 - DiceScore(num_classes=2)).to(params["device"])
     else:
-        criterion = (1 - BinaryJaccardIndex()).to(params["device"])
+        criterion = (1 - BinaryJaccardIndex()).to(params["device"])# + nn.BCEWithLogitsLoss().to(params["device"])
+        #criterion = nn.BCEWithLogitsLoss().to(params["device"])
 
     optimizer = torch.optim.Adam(model.parameters(), lr=params["lr"])
     
