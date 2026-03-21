@@ -41,7 +41,7 @@ The main script for running experiments is `src/model.py`. You can run it with v
 ### Basic Command
 
 ```bash
-python src/model.py --device mps --loss_function Jaccard --train_val_seed 42 --augmentation_seed 137 --experiment_name my_experiment
+python src/model.py --device mps --loss_function SoftJaccardBCE --epochs 25 --train_val_seed 42 --augmentation_seed 137 --experiment_name my_experiment
 ```
 
 ### Parameters
@@ -49,10 +49,10 @@ python src/model.py --device mps --loss_function Jaccard --train_val_seed 42 --a
 Here are the primary command-line arguments you can use:
 
 - `--device`: What device you want to train on (`cuda`, `cpu`, `mps`). Default is `cpu`.
-- `--loss_function`: What loss function you want to train the model with (`Jaccard`, `Dice`). Default is `Jaccard`.
+- `--loss_function`: What loss function you want to train the model with (`SoftJaccard`, `SoftDice`, `SoftJaccardBCE`, `SoftDiceBCE`). Default is `SoftJaccardBCE`.
 - `--optimizer`: What optimizer you want to train with (`adam`). Default is `adam`.
 - `--batch_size`: What batch size of the model. Default is `2`.
-- `--lr`: Learning rate of the model. Default is `0.001`.
+- `--lr`: Learning rate of the model. Default is `0.0005`.
 - `--epochs`: Number of epochs to run. Default is `10`.
 - `--train_val_seed`: Seed used to split training and validation data. Default is `42`.
 - `--augmentation_seed`: Seed used for augmenting samples. Default is `137`.
@@ -195,8 +195,6 @@ of the leaves. Given that the veins are contained within the leaf, there is an a
 should not look outside from. Adding a boundary-aware loss term such as BinaryCrossEntropy could reduce
 the number of false positives due to the noise produced by the Jaccard loss term.
 
-**I'll be adding this regularlized loss function now, though there seems to be some subtlety with pytorch since simply using
-`criterion = 1 - BinaryJaccardIndex() + nn.BCEWithLogitsLoss()` does not seem to be aloud.**
 
 ### Choice of Augmentations
 

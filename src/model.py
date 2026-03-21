@@ -56,7 +56,7 @@ def main(args):
     train_transform = A.Compose(
         [
             A.PadIfNeeded(min_height=PADDED_HEIGHT, min_width=PADDED_WIDTH, border_mode=cv2.BORDER_CONSTANT),
-            A.RandomCrop(256, 256),
+            A.RandomCrop(512, 512),
             A.ElasticTransform(alpha=1, sigma=50, p=0.5),
             A.HorizontalFlip(p=0.5),
             #A.VerticalFlip(p=0.5),
