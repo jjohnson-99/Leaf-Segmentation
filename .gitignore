@@ -15,6 +15,7 @@ cache/
 
 # Files
 temp/
+*.ipynb
 
 # Dot files
 .DS_Store

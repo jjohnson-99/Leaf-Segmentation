@@ -41,7 +41,7 @@ The main script for running experiments is `src/model.py`. You can run it with v
 ### Basic Command
 
 ```bash
-python src/model.py --device mps --loss_function SoftJaccardBCE --epochs 25 --train_val_seed 42 --augmentation_seed 137 --experiment_name my_experiment
+uv run python src/model.py --device mps --loss_function SoftJaccardBCE --epochs 25 --train_val_seed 42 --augmentation_seed 137 --experiment_name my_experiment
 ```
 
 ### Parameters
